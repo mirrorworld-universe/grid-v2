@@ -1,5 +1,5 @@
-mod cache;
 mod error;
+mod hypergrid;
 mod rpc;
 mod svm;
 
