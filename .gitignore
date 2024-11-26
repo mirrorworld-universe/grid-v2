@@ -23,3 +23,9 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# Custom
+.env
+.env.local
+.editorconfig
+.DS_Store
