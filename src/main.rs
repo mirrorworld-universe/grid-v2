@@ -11,7 +11,12 @@ fn main() -> Result<()> {
         // .version("0.1.0") // commented out to get version from manifest
         .about("Grid V2")
         .arg_required_else_help(true)
-        .arg(Arg::new("NAME").help("Name").long("name").short('n'))
+        .arg(
+            Arg::new("RPC_URL")
+                .help("Base layer RPC URL")
+                .long("rpc-url")
+                .short('r'),
+        )
         .get_matches();
 
     Ok(())
