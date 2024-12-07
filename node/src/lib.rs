@@ -9,6 +9,10 @@ use grid_node_router::Routing;
 // Node
 //------------------------------------------
 
+/// Node Enum.
+///
+/// Lists the available Node types.
+///
 pub enum Node<N: Network> {
     Grid(Grid<N>),
 }
@@ -25,8 +29,17 @@ pub enum NodeType {
     Grid,
 }
 
+/// NodeScaffolding Trait.
+///
+/// Defines the behaviors expected from a crude Node.
+/// - Setup
+/// - Startup
+/// - Task Scheduling
+/// - Graceful Teardown
+/// - Shutdown
+///
 #[async_trait]
-pub trait NodeInterface<N: Network>: Routing<N> {
+pub trait NodeScaffolding<N: Network>: Routing<N> {
     fn node_type(&self) -> NodeType;
     async fn shutdown(&self);
 }

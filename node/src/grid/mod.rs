@@ -1,6 +1,6 @@
 pub mod runtime;
 
-use crate::{NodeInterface, NodeType};
+use crate::{NodeScaffolding, NodeType};
 use anyhow::Result;
 use async_trait::async_trait;
 use grid_node_core::Network;
@@ -21,6 +21,13 @@ use runtime::GridRuntime;
 // Grid
 //------------------------------------------
 
+/// Grid.
+///
+/// A specific type of Node.
+///
+/// The main Node implementation critical to
+/// bootstrapping the network.
+///
 #[derive(Copy, Clone, Debug)]
 pub struct Grid<N: Network> {
     node_type: NodeType,
@@ -85,7 +92,7 @@ impl<N: Network> SolanaRpcPubSubServer for Grid<N> {
 }
 
 #[async_trait]
-impl<N: Network> NodeInterface<N> for Grid<N> {
+impl<N: Network> NodeScaffolding<N> for Grid<N> {
     fn node_type(&self) -> NodeType {
         self.node_type
     }
