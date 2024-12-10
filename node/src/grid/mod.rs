@@ -1,6 +1,6 @@
 pub mod runtime;
 
-use crate::{NodeInterface, NodeType};
+use crate::{NodeScaffolding, NodeType};
 use anyhow::Result;
 use async_trait::async_trait;
 use grid_node_core::Network;
@@ -16,20 +16,42 @@ use grid_node_solana_rpc::{
     solana_rpc_client_api::config::{RpcSendTransactionConfig, RpcSimulateTransactionConfig},
 };
 use runtime::GridRuntime;
+use std::{
+    future::Future,
+    net::{IpAddr, SocketAddr},
+};
 
 //------------------------------------------
 // Grid
 //------------------------------------------
 
-#[derive(Copy, Clone, Debug)]
+/// Grid.
+///
+/// A specific type of Node.
+///
+/// The main Node implementation critical to
+/// bootstrapping the network.
+///
+#[derive(Clone, Debug)]
 pub struct Grid<N: Network> {
     node_type: NodeType,
+    node_ip: IpAddr,
+    rpc_port: u16,
+    rpc_pubsub_port: u16,
     runtime: GridRuntime<N>,
 }
 
 impl<N: Network> Grid<N> {
-    pub fn new(node_type: NodeType) -> Result<Self> {
+    pub fn new(
+        node_ip: IpAddr,
+        rpc_port: u16,
+        rpc_pubsub_port: u16,
+        node_type: NodeType,
+    ) -> Result<Self> {
         Ok(Self {
+            node_ip,
+            rpc_port,
+            rpc_pubsub_port,
             node_type,
             // TODO: Configure GridRuntime;
             runtime: GridRuntime::<N>::new(),
@@ -38,19 +60,68 @@ impl<N: Network> Grid<N> {
 }
 
 //------------------------------------------
+// NodeBase
+//------------------------------------------
+
+#[async_trait]
+impl<N: Network> NodeScaffolding<N> for Grid<N> {
+    //------------------------------------------
+    // Associated Functions
+    //------------------------------------------
+
+    fn prepare(&self) {}
+
+    fn shutdown(&self) {}
+
+    //------------------------------------------
+    // Asynchronous Associated Functions
+    //------------------------------------------
+
+    /// Runs Node and initial services.
+    async fn run(&self) -> Result<()> {
+        self.enable_listeners().await?;
+        Ok(())
+    }
+
+    //------------------------------------------
+    // Getters
+    //------------------------------------------
+
+    /// Get Node type.
+    fn node_type(&self) -> NodeType {
+        self.node_type
+    }
+}
+
+//------------------------------------------
 // Routing
 //------------------------------------------
 
 // Routing
+#[async_trait]
 impl<N: Network> Routing<N> for Grid<N> {
-    fn enable_listeners(&self) {
-        self.enable_rpc_pubsub();
-        self.enable_rpc_http();
+    /// Enable all Routing listeners
+    async fn enable_listeners(&self) -> Result<()> {
+        self.enable_listener().await?;
+        Ok(())
+    }
+
+    fn ip(&self) -> IpAddr {
+        self.node_ip
     }
 }
 
 // InboundRpcHttp
-impl<N: Network> InboundRpcHttp for Grid<N> {}
+#[async_trait]
+impl<N: Network> InboundRpcHttp for Grid<N> {
+    fn rpc_url(&self) -> SocketAddr {
+        SocketAddr::new(self.ip(), self.port())
+    }
+
+    fn port(&self) -> u16 {
+        self.rpc_port
+    }
+}
 
 // SolanaRpcServer
 #[async_trait]
@@ -61,6 +132,8 @@ impl<N: Network> SolanaRpcServer for Grid<N> {
         config: Option<RpcSendTransactionConfig>,
     ) -> RpcResult<String> {
         self.runtime.process_transaction();
+        println!("Transaction: {:?}", transaction);
+        println!("Config: {:?}", config);
         Ok(String::new())
     }
 
@@ -74,23 +147,13 @@ impl<N: Network> SolanaRpcServer for Grid<N> {
     }
 }
 
-// InboundRpcPubSub
-impl<N: Network> InboundRpcPubSub for Grid<N> {}
-
-#[async_trait]
-impl<N: Network> SolanaRpcPubSubServer for Grid<N> {
-    async fn slot_subscribe(&self, pending: PendingSubscriptionSink) -> SubscriptionResult {
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl<N: Network> NodeInterface<N> for Grid<N> {
-    fn node_type(&self) -> NodeType {
-        self.node_type
-    }
-
-    async fn shutdown(&self) {
-        println!("Shutting down")
-    }
-}
+// // InboundRpcPubSub
+// impl<N: Network> InboundRpcPubSub for Grid<N> {}
+//
+// // SolanaRpcPubSubServer
+// #[async_trait]
+// impl<N: Network> SolanaRpcPubSubServer for Grid<N> {
+//     async fn slot_subscribe(&self, pending: PendingSubscriptionSink) -> SubscriptionResult {
+//         Ok(())
+//     }
+// }
